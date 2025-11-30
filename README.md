@@ -1,0 +1,1 @@
+Implementación en Python do algoritmo eSS (enhanced Scatter Search) desenvolvido na suite de optimización de MEIGO, co fin de resolver problemas de optimización globais non lineais basado nunha metaheurística avanzada.
