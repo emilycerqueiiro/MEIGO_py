@@ -14,10 +14,18 @@ def create_refset(population, obj_func, refset_size=10):
     idx_sorted = np.argsort(scores) # devuelve los indices ordenados de menor a mayor
     best_half = population[idx_sorted[:refset_size // 2]] # primera mitad de population
 
+    print(f"[create_refset] Best half selected ({best_half})")
+
     remaining = population[idx_sorted[refset_size // 2:]] # segunda mitad de population
     diverse_half = select_most_diverse(remaining, best_half, refset_size // 2)
 
-    refset = np.vstack([best_half, diverse_half]) 
+    print(f"[create_refset] Remaining for diversity ({remaining})")
+
+    refset = np.vstack([best_half, diverse_half])
+
+    print(f"[create_refset] Final RefSet:")
+    print(refset)
+
     return refset
 
 
@@ -26,7 +34,11 @@ def select_most_diverse(candidates, reference, k):
     Selecciona k soluciones de 'candidates' que estén más alejadas de 'reference':'best references'.
     """
     diverse = []
-    for _ in range(k):
+    candidates = np.array(candidates)
+    
+    print(f"[select_most_diverse] Selecting {k} diverse solutions from {len(candidates)} candidates")
+
+    while len(candidates) > 0 and len(diverse) < k:
         # Calcular distancia mínima a cualquier solución en el RefSet actual
         dists = [np.min([np.linalg.norm(c - r) for r in reference]) for c in candidates]
         # calcula la distancia euclidea para saber cual está mas alejado
@@ -35,9 +47,12 @@ def select_most_diverse(candidates, reference, k):
         # Añadir al RefSet y eliminar del pool
         reference = np.vstack([reference, candidates[idx]])
         candidates = np.delete(candidates, idx, axis=0)
+
+    print(f"[select_most_diverse] Diverse solutions selected: {np.array(diverse)}")
+   
     return np.array(diverse)
 
 # ejemplo
-candidates = [np.array([0, 0]), np.array([3, 4]), np.array([5, 5])]
-reference = [np.array([1, 1]), np.array([4, 4])]
-diverse_half = select_most_diverse(candidates, reference, 10 // 2)
+# candidates = [np.array([0, 0]), np.array([3, 4]), np.array([5, 5])]
+# reference = [np.array([1, 1]), np.array([4, 4])]
+# diverse_half = select_most_diverse(candidates, reference, 10 // 2)
