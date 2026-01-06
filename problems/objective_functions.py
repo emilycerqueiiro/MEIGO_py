@@ -30,6 +30,20 @@ def sphere(x, return_grad: bool = False):
     else:
         return f
     
+def rosenbrock(x, return_grad: bool = False):
+    x = np.array(x, dtype=float)
+    f = 0
+    for i in range(len(x) - 1):
+        f += 100 * (x[i+1] - x[i]**2)**2 + (x[i] - 1)**2
+    if return_grad:
+        g = np.zeros_like(x)
+        for i in range(len(x) - 1):
+            g[i] += -400 * (x[i+1] - x[i]**2) * x[i] + 2 * (x[i] - 1)
+            g[i+1] += 200 * (x[i+1] - x[i]**2)
+        return f, g
+    else:
+        return f
+    
 def rastrigin(x):
     A = 10
     x = np.array(x)

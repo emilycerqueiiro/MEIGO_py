@@ -56,3 +56,48 @@ def select_most_diverse(candidates, reference, k):
 # candidates = [np.array([0, 0]), np.array([3, 4]), np.array([5, 5])]
 # reference = [np.array([1, 1]), np.array([4, 4])]
 # diverse_half = select_most_diverse(candidates, reference, 10 // 2)
+
+import numpy as np
+from problems.objective_functions import sphere, rosenbrock
+from .utils import evaluate, project_bounds
+
+def ess_kernel_min(problem, opts):
+    """
+    eSS serial mínimo: muestreo uniforme, evaluación, selección y tracking básico.
+    problem: dict con 'f' (callable), 'x_L', 'x_U' (np.ndarray).
+    opts: dict con 'maxeval' (int), 'seed' (int, opcional).
+    Returns: dict Results con 'xbest', 'fbest', 'numeval', 'fbest_trace'.
+    """
+    rng = np.random.default_rng(opts.get('seed', 42))
+    f = problem['f']
+    x_L = np.array(problem['x_L'])
+    x_U = np.array(problem['x_U'])
+    n_var = len(x_L)
+    maxeval = opts['maxeval']
+    
+    numeval = 0
+    fbest = np.inf
+    xbest = None
+    fbest_trace = []
+    
+    while numeval < maxeval:
+        # Muestreo uniforme dentro bounds
+        x = rng.uniform(x_L, x_U, size=n_var)
+        # Project bounds (aunque uniforme ya está dentro, por consistencia)
+        x = project_bounds(x, x_L, x_U)
+        # Evaluar
+        f_val = evaluate(f, x)
+        numeval += 1
+        # Tracking
+        fbest_trace.append(f_val)
+        # Selección
+        if f_val < fbest:
+            fbest = f_val
+            xbest = x.copy()
+    
+    return {
+        'xbest': xbest,
+        'fbest': fbest,
+        'numeval': numeval,
+        'fbest_trace': fbest_trace
+    }
