@@ -4,7 +4,7 @@ from ess.main import ess_kernel_min
 from problems.objective_functions import sphere, rosenbrock
 
 def test_ess_min_invariants():
-    # Configuración
+    # Configuration
     problem = {
         'f': sphere,
         'x_L': [-5.0, -5.0],
@@ -12,27 +12,27 @@ def test_ess_min_invariants():
     }
     opts = {'maxeval': 100, 'seed': 42}
     
-    # Ejecutar
+    # Execute
     results = ess_kernel_min(problem, opts)
     
-    # Invariantes
-    assert results['xbest'] is not None, "xbest debe existir"
-    assert np.all(results['xbest'] >= problem['x_L']), "xbest dentro bounds inferiores"
-    assert np.all(results['xbest'] <= problem['x_U']), "xbest dentro bounds superiores"
-    assert results['numeval'] == opts['maxeval'], "numeval debe ser maxeval"
-    assert len(results['fbest_trace']) == opts['maxeval'], "fbest_trace debe tener maxeval entradas"
-    assert results['fbest'] == min(results['fbest_trace']), "fbest debe ser el mínimo de trace"
-    # Mejora: fbest <= fbest inicial (primera evaluación)
-    assert results['fbest'] <= results['fbest_trace'][0], "fbest debe mejorar o igualar inicial"
+    # Invariants
+    assert results['xbest'] is not None, "xbest must exist"
+    assert np.all(results['xbest'] >= problem['x_L']), "xbest in bounds inferiores"
+    assert np.all(results['xbest'] <= problem['x_U']), "xbest in bounds superiores"
+    assert results['numeval'] == opts['maxeval'], "numeval must be maxeval"
+    assert len(results['fbest_trace']) == opts['maxeval'], "fbest_trace must have maxeval entries"
+    assert results['fbest'] == min(results['fbest_trace']), "fbest must be the minimum of trace"
+    # Improvement: fbest <= initial fbest (first evaluation)
+    assert results['fbest'] <= results['fbest_trace'][0], "fbest must improve or equal initial"
     
-    # Reproducibilidad
+    # Reproducibility
     results2 = ess_kernel_min(problem, opts)
-    assert np.allclose(results['xbest'], results2['xbest']), "xbest reproducible con seed"
-    assert results['fbest'] == results2['fbest'], "fbest reproducible con seed"
-    assert results['fbest_trace'] == results2['fbest_trace'], "fbest_trace reproducible con seed"
+    assert np.allclose(results['xbest'], results2['xbest']), "xbest reproducible with seed"
+    assert results['fbest'] == results2['fbest'], "fbest reproducible with seed"
+    assert results['fbest_trace'] == results2['fbest_trace'], "fbest_trace reproducible with seed"
 
 def test_ess_min_rosenbrock():
-    # Prueba con Rosenbrock
+    # Test with Rosenbrock
     problem = {
         'f': rosenbrock,
         'x_L': [-2.0, -2.0],
@@ -45,6 +45,6 @@ def test_ess_min_rosenbrock():
     assert results['numeval'] == 50
     assert np.all(results['xbest'] >= problem['x_L'])
     assert np.all(results['xbest'] <= problem['x_U'])
-    # Rosenbrock mínimo en [1,1,...], f=0
-    # Con pocas evaluaciones, no necesariamente llega, pero sanity
+    # Minimum Rosenbrock in [1,1,...], f=0
+    # Few evaluations, not necessarily reaches it, but sanity
     assert results['fbest'] >= 0

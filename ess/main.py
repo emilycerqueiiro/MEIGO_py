@@ -1,69 +1,89 @@
 import numpy as np
+from problems.objective_functions import sphere, rosenbrock
+from .utils import evaluate, project_bounds
 
-def create_refset(population, obj_func, refset_size=10):
+def generate_initial_population(rng, pop_size, x_L, x_U):
+    """
+    Genera población inicial uniforme dentro de bounds.
+    rng: np.random.Generator
+    pop_size: int
+    x_L, x_U: np.ndarray
+    Returns: np.ndarray (pop_size, dim)
+    """
+    x_L = np.array(x_L)
+    x_U = np.array(x_U)
+    dim = len(x_L)
+    population = rng.uniform(x_L, x_U, size=(pop_size, dim))
+    return population
 
-    # population: matriz [n_solutions, dim] con las soluciones iniciales.
-    # obj_func: función que toma una solución y devuelve su valor.
-    # refset_size: número total de soluciones en el RefSet (par).
-    # refset: matriz [refset_size, dim]
+def create_refset(population, f_pop, refset_size, refset1_size=None):
+    """
+    Crea RefSet con calidad y diversidad.
+    population: np.ndarray (n, dim)
+    f_pop: np.ndarray (n,)
+    refset_size: int, par
+    refset1_size: int or None
+    Returns: dict ResultsRefset {'x': (refset_size, dim), 'f': (refset_size,), 'idx_r1': array, 'idx_r2': array, 'idx_all': array}
+    """
+    if refset1_size is None:
+        refset1_size = refset_size // 2
 
-    n_solutions = population.shape[0] # n soluciones = n filas de population
+    idx_sorted = np.argsort(f_pop)
+    idx_r1 = idx_sorted[:refset1_size]
+    best_half = population[idx_r1]
 
-    scores = np.array([obj_func(i) for i in population]) # matriz de soluciones sustituidas en obj_func
-
-    idx_sorted = np.argsort(scores) # devuelve los indices ordenados de menor a mayor
-    best_half = population[idx_sorted[:refset_size // 2]] # primera mitad de population
-
-    print(f"[create_refset] Best half selected ({best_half})")
-
-    remaining = population[idx_sorted[refset_size // 2:]] # segunda mitad de population
-    diverse_half = select_most_diverse(remaining, best_half, refset_size // 2)
-
-    print(f"[create_refset] Remaining for diversity ({remaining})")
+    remaining = population[idx_sorted[refset1_size:]]
+    remaining_indices = idx_sorted[refset1_size:]
+    diverse_half, idx_r2 = select_most_diverse(remaining, best_half, refset_size - refset1_size, remaining_indices)
 
     refset = np.vstack([best_half, diverse_half])
+    f_refset = np.concatenate([f_pop[idx_r1], f_pop[idx_r2]])
+    idx_all = np.concatenate([idx_r1, idx_r2])
 
-    print(f"[create_refset] Final RefSet:")
-    print(refset)
+    return {
+        'x': refset,
+        'f': f_refset,
+        'idx_r1': idx_r1,
+        'idx_r2': idx_r2,
+        'idx_all': idx_all
+    }
 
-    return refset
 
-
-def select_most_diverse(candidates, reference, k):
+def select_most_diverse(candidates, reference, k, candidate_indices):
     """
-    Selecciona k soluciones de 'candidates' que estén más alejadas de 'reference':'best references'.
+    Selecciona k soluciones de 'candidates' que estén más alejadas de 'reference' usando maximin iterativo con S acumulado.
+    candidates: np.ndarray (m, dim)
+    reference: np.ndarray (r, dim), inicial RefSet1
+    k: int
+    candidate_indices: np.ndarray (m,), índices originales en population
+    Returns: (diverse: np.ndarray (k, dim), indices: np.ndarray (k,))
     """
     diverse = []
+    indices = []
     candidates = np.array(candidates)
+    candidate_indices = np.array(candidate_indices)
     
-    print(f"[select_most_diverse] Selecting {k} diverse solutions from {len(candidates)} candidates")
-
     while len(candidates) > 0 and len(diverse) < k:
-        # Calcular distancia mínima a cualquier solución en el RefSet actual
-        dists = [np.min([np.linalg.norm(c - r) for r in reference]) for c in candidates]
-        # calcula la distancia euclidea para saber cual está mas alejado
+        # Calcular distancia mínima a cualquier solución en el RefSet actual (S = reference + diverse)
+        current_ref = np.array(reference) if len(diverse) == 0 else np.vstack([reference, diverse])
+        dists = [np.min([np.linalg.norm(c - r) for r in current_ref]) for c in candidates]
         idx = np.argmax(dists)
         diverse.append(candidates[idx])
-        # Añadir al RefSet y eliminar del pool
-        reference = np.vstack([reference, candidates[idx]])
+        indices.append(candidate_indices[idx])
+        # Eliminar del pool
         candidates = np.delete(candidates, idx, axis=0)
-
-    print(f"[select_most_diverse] Diverse solutions selected: {np.array(diverse)}")
-   
-    return np.array(diverse)
+        candidate_indices = np.delete(candidate_indices, idx)
+    
+    return np.array(diverse), np.array(indices)
 
 # ejemplo
 # candidates = [np.array([0, 0]), np.array([3, 4]), np.array([5, 5])]
 # reference = [np.array([1, 1]), np.array([4, 4])]
 # diverse_half = select_most_diverse(candidates, reference, 10 // 2)
 
-import numpy as np
-from problems.objective_functions import sphere, rosenbrock
-from .utils import evaluate, project_bounds
-
 def ess_kernel_min(problem, opts):
     """
-    eSS serial mínimo: muestreo uniforme, evaluación, selección y tracking básico.
+    minimun serial eSS: muestreo uniforme, evaluación, selección and basic tracking.
     problem: dict con 'f' (callable), 'x_L', 'x_U' (np.ndarray).
     opts: dict con 'maxeval' (int), 'seed' (int, opcional).
     Returns: dict Results con 'xbest', 'fbest', 'numeval', 'fbest_trace'.
@@ -85,12 +105,12 @@ def ess_kernel_min(problem, opts):
         x = rng.uniform(x_L, x_U, size=n_var)
         # Project bounds (aunque uniforme ya está dentro, por consistencia)
         x = project_bounds(x, x_L, x_U)
-        # Evaluar
+        # Evaluate
         f_val = evaluate(f, x)
         numeval += 1
         # Tracking
         fbest_trace.append(f_val)
-        # Selección
+        # Selection
         if f_val < fbest:
             fbest = f_val
             xbest = x.copy()
