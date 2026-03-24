@@ -1,0 +1,249 @@
+================================================================================
+CHANGE-001
+Fecha: 2026-01-06
+Autor: Emily Lorena Cerqueiro Machado
+Estado: VALIDADO
+Título: eSS serial mínimo: muestreo uniforme, evaluación, selección y tracking básico
+================================================================================
+
+1) Cambios por fichero (propuesta)
+- MEIGO_py/ess/main.py
+  - Cambio: Añadir función ess_kernel_min (equivalente simplificado a partes iniciales de ess_kernel.m) para muestreo uniforme dentro bounds, evaluación de función objetivo, selección de xbest/fbest, tracking de numeval y fbest_trace, y retorno de Results dict consistente. Usa project_bounds para clip y evaluate para evaluación.
+  - Funciones/clases: ess_kernel_min(problem, opts) → dict Results con xbest, fbest, numeval, fbest_trace.
+- MEIGO_py/problems/objective_functions.py
+  - Cambio: Asegurar funciones de prueba sphere(x) y rosenbrock(x) (si no existen, añadir con NumPy; genéricas para cualquier dimensión).
+  - Funciones/clases: sphere(x), rosenbrock(x).
+- MEIGO_py/ess/utils.py
+  - Cambio: Añadir evaluate(f, x) para evaluación simple y project_bounds(x, x_L, x_U) para clip bounds (separados para futura penalización).
+  - Funciones/clases: evaluate(f, x) → f_val; project_bounds(x, x_L, x_U) → clipped_x.
+- tests/test_ess_serial_min.py
+  - Cambio: Crear test pytest con invariantes y sanity checks.
+  - Funciones/clases: test_ess_min_invariants (xbest en bounds, numeval correcto, fbest mejora, seed reproducible).
+
+2) Decisión y motivo (1–3 líneas)
+- Decisión: Implementar eSS serial mínimo con solo muestreo, evaluación, selección y tracking, recortando alcance para validar base antes de algoritmos complejos.
+- Motivo: Reduce riesgo de bugs; permite sanity checks reproducibles sin combinación/local solver.
+
+3) Referencia al código MATLAB/R original
+- MATLAB: Partes iniciales de eSS/ess_kernel.m (muestreo, evaluación básica).
+- R: No aplica.
+
+4) Observaciones sobre la implementación original (MATLAB)
+- Usa rand para muestreo uniforme; evalúa con feval; selecciona best simple; tracks básicos.
+
+5) Implicaciones al trasladar a Python
+- RNG: rand() → numpy.random.default_rng(seed).
+- Evaluación: feval → llamada directa a función.
+- Bounds: Clip separado en project_bounds.
+
+6) Ventajas de Python implementadas aquí
+- NumPy para muestreo vectorizado.
+- Dict Results simple y reproducible.
+
+7) Desventajas / limitaciones respecto a MATLAB
+- Sin algoritmos avanzados; solo baseline.
+
+8) Tests y evidencia (plan)
+- tests/test_ess_serial_min.py: 2 passed, Python 3.14.2, pytest 9.0.2. Sanity checks (bounds, numeval, mejora, seed=42 reproducible).
+
+9) Conclusión matemática del procedimiento
+- Baseline: Muestreo aleatorio + evaluación para encontrar mejor inicial.
+
+10) Pendientes / riesgos / próximos pasos
+- Pendiente: Integrar combinación y local solver en cambios futuros.
+- Riesgo: Sobre-simplificación; mitigación: expandir en CHANGE-002.
+- Próximo paso: Implementar ssm_diverse + ssm_combination.
+--------------------------------------------------------------------------------
+FIN CHANGE-001
+--------------------------------------------------------------------------------
+
+================================================================================
+CHANGE-002
+Fecha: 2026-01-07
+Autor: Emily Lorena Cerqueiro Machado
+Estado: VALIDADO
+Título: Implementar fase RefSet + diversidad de eSS (uniforme, calidad, maximin)
+================================================================================
+
+1) Cambios por fichero (propuesta)
+- MEIGO_py/ess/main.py (Progreso: 75%)
+  - Cambio: Añadir generate_initial_population para muestreo uniforme dentro bounds con rng externo, shape (pop_size, dim). Refinar create_refset para aceptar f_pop pre-evaluado, devolver dict ResultsRefset con 'x', 'f', 'idx_r1', 'idx_r2', 'idx_all' (sin cambiar lógica maximin). Garantizar select_most_diverse usa S = RefSet1 + añadidos en RefSet2.
+  - Funciones/clases: generate_initial_population(rng, pop_size, x_L, x_U) → np.ndarray (pop_size, dim) (Progreso: 75%); create_refset(population, f_pop, refset_size, refset1_size=None) → dict ResultsRefset (Progreso: 75%); select_most_diverse(candidates, reference, k, candidate_indices) (Progreso: 75%).
+- MEIGO_py/ess/utils.py (Progreso: 65%)
+  - Cambio: Añadir euclidean_distances(A, B) vectorizada con NumPy para distancias euclidianas entre matrices.
+  - Funciones/clases: euclidean_distances(A, B) → np.ndarray distancias (Progreso: 65%).
+- tests/test_refset.py (Progreso: 80%)
+  - Cambio: Implementar tests con seed fija para validar RefSet.
+  - Funciones/clases: test_refset_sizes_and_unique_indices (Progreso: 80%); test_refset1_quality_matches_sorted_fitness (Progreso: 80%); test_refset2_diversity_beats_random (Progreso: 80%).
+
+2) Decisión y motivo (1–3 líneas)
+- Decisión: Completar RefSet/diversidad existente con generación uniforme, estandarización de outputs y tests cuantitativos, sin alterar lógica core.
+- Motivo: Ya existe base maximin; enfocarse en integración futura y validación reproducible.
+
+3) Referencia al código MATLAB/R original
+- MATLAB: eSS/ssm_diverse.m (diversidad), ess_kernel.m (RefSet creación), eucl_dist.m (distancias).
+- R: No aplica.
+
+4) Observaciones sobre la implementación original (MATLAB)
+- ssm_diverse genera población diversa; RefSet combina calidad (mejores) y diversidad (maximin); distancias euclidianas.
+
+5) Implicaciones al trasladar a Python
+- RNG: rand → numpy.random.default_rng.
+- Distancias: eucl_dist → euclidean_distances vectorizada.
+- Outputs: Struct Refset → dict ResultsRefset.
+
+6) Ventajas de Python implementadas aquí
+- Vectorización NumPy para distancias y muestreo.
+- Dict outputs flexibles.
+
+7) Desventajas / limitaciones respecto a MATLAB
+- Sin paralelismo ni opciones avanzadas; solo serial.
+
+8) Tests y evidencia (evidencia)
+- pytest tests/test_refset.py: 3 passed in 3.82s. RefSet1 corresponde a mejores f_pop por índices. select_most_diverse implementa maximin iterativo usando S = RefSet1 + añadidos previos. RefSet2 selected_mean_min_dist > random_mean_min_dist en Sphere 2D con seeds [42,43,44], tamaños fijos. Sin duplicados en idx_all.
+
+9) Conclusión matemática del procedimiento
+- RefSet: Calidad + diversidad maximin para exploración equilibrada.
+
+10) Pendientes / riesgos / próximos pasos
+- Pendiente: Combinación y local solver.
+- Riesgo: Cambios en outputs; mitigación: tests.
+- Próximo paso: Integrar en kernel eSS.
+--------------------------------------------------------------------------------
+FIN CHANGE-002
+--------------------------------------------------------------------------------
+
+================================================================================
+CHANGE-003 (PROPUESTA)
+Fecha: 2026-01-21
+Autor: Emily Lorena Cerqueiro Machado (en desarrollo)
+Estado: PROPUESTA
+Título: Implementar fase Combinación de eSS (recombinación adaptativa con extrapolación)
+================================================================================
+
+1) Cambios por fichero
+- MEIGO_py/ess/combination.py (NUEVO)
+  - Funciones: ssm_combination(refset_x, n_combinations, rng, x_L, x_U, opts)
+                ssm_beyond(z1, z2, x_L, x_U, rng, opts)
+- MEIGO_py/ess/main.py
+  - Actualizar: ess_kernel_min para iterar RefSet → Combinación → Evaluación
+- tests/test_combination.py (NUEVO)
+  - Tests unitarios para ssm_combination y ssm_beyond con seed reproducible
+
+2) Decisión y motivo
+- Decisión: Implementar fase Combinación de eSS con generación adaptativa de 
+  5 puntos base, selección de pares, extrapolación (ssm_beyond) si mejora.
+- Motivo: Expande eSS hacia búsqueda iterativa completa (muestreo → RefSet → 
+  Combinación → Evaluación → Actualización). Mantiene scope mínimo: sin 
+  constraints, sin búsqueda local.
+
+3) Referencia al código MATLAB/R original
+- MATLAB: eSS/ssm_combination.m (generación de 5 puntos base, selección pares),
+          eSS/ssm_beyond.m (extrapolación adaptativa).
+
+4) Observaciones sobre la implementación original (MATLAB)
+- Genera 5 puntos alrededor de x1 y x2 (combinaciones convexas + extremales).
+- Selecciona 2–4 pares según calidad de padres.
+- Intenta extrapolación (ssm_beyond) si hijo mejora RefSet.
+- Clipea límites con probabilidad adaptativa (prob_bound).
+
+5) Implicaciones al trasladar a Python
+- RNG: uso consistente de np.random.Generator desde opts.
+- Evaluación: llamadas a f(x) y tracking de fbest_trace.
+- Bounds: proyecto con project_bounds y manejo probabilístico.
+- RefSet update: reemplaza si mejora (greedy).
+
+6) Ventajas de Python implementadas aquí
+- NumPy vectorización para generación de 5 puntos.
+- Dict opts compartido para reproducibilidad.
+- Tests reproducibles con seed fija.
+
+7) Desventajas / limitaciones respecto a MATLAB
+- Sin constraints: no penaliza violations.
+- Sin búsqueda local: no refina hijos (futuro CHANGE-004).
+- Extrapolación simple: ssm_beyond no usa RNG avanzado (MATLAB sí).
+
+================================================================================
+PORCENTAJE DE REALIZACIÓN ESTIMADO
+- ssm_combination (punto base + pares): 40%
+- ssm_beyond (extrapolación): 30%
+- Integración en ess_kernel_min: 20%
+- Tests: 10%
+
+DEPENDENCIAS
+- CHANGE-001 (ess_kernel_min, muestreo, evaluación).
+- CHANGE-002 (create_refset, RefSet como entrada).
+- NumPy (vectorización).
+
+CAMBIOS ESPERADOS EN LEDGER
+- +2 OWN: ssm_combination, ssm_beyond
+- +2 EXT: np.random.choice, np.linalg.norm (si extrapolación)
+- Actualización: ess_kernel_min (L2 → L3 por iteración)
+
+================================================================================
+================================================================================
+CHANGE-003
+Fecha: 2026-03-09
+Autor: Emily Lorena Cerqueiro Machado
+Estado: IMPLEMENTADO (sin validacion automatica por falta de pytest en entorno)
+Titulo: Modulo de combinacion eSS desacoplado (nucleo matematico determinista)
+================================================================================
+
+1) Cambios por fichero (propuesta ajustada + ejecucion)
+- MEIGO_py/ess/combination.py (Propuesta: 25%)
+  - Implementado: API modular desacoplada del kernel eSS.
+  - Funciones: build_combination_pairs, combine_pair_core, generate_candidates_from_refset.
+  - Regla aplicada: x1/x2 pueden usarse internamente, pero no se devuelven por defecto como candidatos nuevos.
+  - Generacion: determinista (sin muestreo aleatorio).
+- MEIGO_py/tests/test_combine.py (Propuesta: 20%)
+  - Implementado: tests unitarios para seleccion de pares, fallback, bounds, no evaluacion interna, no mutacion y determinismo.
+- MEIGO_py/changes-py.txt (Propuesta: 100%)
+  - Implementado: registro de cambio actualizado con porcentajes de propuesta solicitados.
+
+2) Decision y motivo (1-3 lineas)
+- Se implementa combinacion como componente reusable para evolucionar luego a CeSS/cVNS sin acoplarla al loop principal de eSS.
+- Se mantiene fidelidad conceptual a ssm_combination en el nucleo geometrico, acotando alcance a candidatos no evaluados.
+
+3) Referencia al codigo MATLAB/R original
+- MATLAB: MEIGO_matlab/eSS/ssm_combination.m.
+- R: No aplica.
+
+4) Observaciones sobre la implementacion original (MATLAB)
+- MATLAB usa 5 puntos auxiliares (v1..v5) y define 4/2/3 combinaciones segun tipo de par (RefSet1-RefSet1, RefSet2-RefSet2, mixto).
+- MATLAB incluye evaluacion, restricciones y ssm_beyond, fuera del alcance de este cambio.
+
+5) Implicaciones al trasladar a Python
+- Prioridad de uso de idx_r1/idx_r2 cuando existen; fallback por fitness solo si faltan o no son mapeables.
+- Combinacion determinista: candidatos por puntos medios de segmentos conceptuales equivalentes.
+- Bounds aplicados con project_bounds.
+
+6) Ventajas de Python implementadas aqui
+- API modular reusable y testeable.
+- Separacion de responsabilidades: pares, combinacion, agregado de candidatos.
+- Inmutabilidad de entradas refset['x'] y refset['f'].
+
+7) Desventajas / limitaciones respecto a MATLAB
+- Sin evaluacion de objetivo.
+- Sin constraints ni penalizacion.
+- Sin ssm_beyond.
+- Sin integracion al kernel principal en esta fase.
+
+8) Tests y evidencia
+- Archivo de tests actualizado: tests/test_combine.py.
+- Comando solicitado ejecutado: python -m pytest tests/test_combine.py -v
+- Resultado real del entorno:
+  C:\Users\Emily\AppData\Local\Python\pythoncore-3.14-64\python.exe: No module named pytest
+- Evidencia adicional:
+  pytest tests/test_combine.py -v
+  -> pytest : The term 'pytest' is not recognized as the name of a cmdlet, function, script file, or operable program.
+
+9) Conclusion matematica del procedimiento
+- Se generan candidatos nuevos deterministas a partir de la geometria v1..v5 derivada de dos padres, con reglas por tipo de par y proyeccion a bounds.
+
+10) Pendientes / riesgos / proximos pasos
+- Pendiente: ejecutar tests cuando pytest este disponible en el entorno (sin cambiar alcance funcional).
+- Riesgo: diferencias de comportamiento frente a MATLAB completo por ausencia de fases de evaluacion/ssm_beyond.
+- Proximo paso: integrar en kernel solo tras aprobacion de fase siguiente.
+--------------------------------------------------------------------------------
+FIN CHANGE-003
+--------------------------------------------------------------------------------

@@ -9,15 +9,6 @@ def evaluate(f, x):
     """
     return f(x)
 
-def project_bounds(x, x_L, x_U):
-    """
-    Proyecta x dentro de los bounds [x_L, x_U] mediante clip.
-    x: np.ndarray, punto.
-    x_L, x_U: np.ndarray, bounds inferiores y superiores.
-    Returns: np.ndarray, x clipped.
-    """
-    return np.clip(x, x_L, x_U)
-
 def euclidean_distances(A, B):
     """
     Calcula distancias euclideas entre cada fila de A y cada fila de B.
@@ -29,3 +20,21 @@ def euclidean_distances(A, B):
     diff = A[:, np.newaxis, :] - B[np.newaxis, :, :]
     dists = np.sqrt(np.sum(diff**2, axis=2))
     return dists
+
+def project_bounds(x, x_L, x_U):
+    """
+    Proyecta un punto x al hipercubo [x_L, x_U] clipeando cada componente.
+    
+    Uso:
+    - Búsqueda local: solvers pueden explorar fuera de bounds; esto asegura factibilidad.
+    - Combinación de soluciones: offspring pueden violar bounds; clipear es una estrategia simple.
+    - Inicialización defensiva: aunque muestreo uniforme ya garantiza, usar como safeguard.
+    
+    x: np.ndarray (dim,)
+    x_L, x_U: np.ndarray (dim,)
+    Returns: x_proj con x_L[i] <= x_proj[i] <= x_U[i]
+    """
+    x = np.array(x)
+    x_L = np.array(x_L)
+    x_U = np.array(x_U)
+    return np.clip(x, x_L, x_U)

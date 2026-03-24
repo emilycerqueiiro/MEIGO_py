@@ -2,7 +2,7 @@ import numpy as np
 
 def generate_diverse_population(n_points, x_L, x_U, seed=None):
     """
-    Igual funcionalidad que ssm_diverse.k, pero vectorizado.
+    Igual funcionalidad que ssm_diverse.m, pero vectorizado.
     Devuelve matriz (n_points, dim) dentro de [x_L, x_U].
     """
     rng = np.random.default_rng(seed)

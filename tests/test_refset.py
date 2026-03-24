@@ -2,8 +2,9 @@ import numpy as np
 from ess.main import create_refset, generate_initial_population
 from problems.objective_functions import sphere
 
-def test_refset_sizes_and_unique_indices():
-    rng = np.random.default_rng(42)
+def test_refset_sizes_and_unique_indices(opts=None):
+    seed = opts.get('seed', 42) if opts else 42
+    rng = np.random.default_rng(seed)
     pop_size = 20
     x_L = np.array([-5.0, -5.0])
     x_U = np.array([5.0, 5.0])
@@ -19,8 +20,9 @@ def test_refset_sizes_and_unique_indices():
     assert len(results['idx_all']) == refset_size
     assert len(np.unique(results['idx_all'])) == refset_size  # no duplicates
 
-def test_refset1_quality_matches_sorted_fitness():
-    rng = np.random.default_rng(42)
+def test_refset1_quality_matches_sorted_fitness(opts=None):
+    seed = opts.get('seed', 42) if opts else 42
+    rng = np.random.default_rng(seed)
     pop_size = 20
     x_L = np.array([-5.0, -5.0])
     x_U = np.array([5.0, 5.0])
@@ -34,8 +36,9 @@ def test_refset1_quality_matches_sorted_fitness():
     np.testing.assert_array_equal(results['idx_r1'], expected_r1)
     np.testing.assert_array_equal(results['f'][:refset_size // 2], f_pop[expected_r1])
 
-def test_refset2_diversity_beats_random():
-    seeds = [42, 43, 44]
+def test_refset2_diversity_beats_random(opts=None):
+    seed_base = opts.get('seed', 42) if opts else 42
+    seeds = [seed_base, seed_base + 1, seed_base + 2]
     pop_size = 50
     refset_size = 10
     x_L = np.array([-5.0, -5.0])

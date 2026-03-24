@@ -2,14 +2,21 @@ import numpy as np
 from problems.objective_functions import sphere, rosenbrock
 from .utils import evaluate, project_bounds
 
-def generate_initial_population(rng, pop_size, x_L, x_U):
+# Versión MÍNIMA: muestreo uniforme puro para tests unitarios.
+# Para eSS estándar con diversificación inteligente, usa generate_diverse_population (en ess/population.py).
+def generate_initial_population(rng=None, pop_size, x_L, x_U, opts=None):
     """
     Genera población inicial uniforme dentro de bounds.
-    rng: np.random.Generator
+    Si rng es None, crea un nuevo RNG usando seed de opts.
+    rng: np.random.Generator (opcional)
     pop_size: int
     x_L, x_U: np.ndarray
+    opts: dict (opcional)
     Returns: np.ndarray (pop_size, dim)
     """
+    if rng is None:
+        seed = opts.get('seed', 42) if opts else 42
+        rng = np.random.default_rng(seed)
     x_L = np.array(x_L)
     x_U = np.array(x_U)
     dim = len(x_L)
@@ -103,8 +110,6 @@ def ess_kernel_min(problem, opts):
     while numeval < maxeval:
         # Muestreo uniforme dentro bounds
         x = rng.uniform(x_L, x_U, size=n_var)
-        # Project bounds (aunque uniforme ya está dentro, por consistencia)
-        x = project_bounds(x, x_L, x_U)
         # Evaluate
         f_val = evaluate(f, x)
         numeval += 1
