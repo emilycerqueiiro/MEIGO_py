@@ -247,3 +247,120 @@ Titulo: Modulo de combinacion eSS desacoplado (nucleo matematico determinista)
 --------------------------------------------------------------------------------
 FIN CHANGE-003
 --------------------------------------------------------------------------------
+
+================================================================================
+CHANGE-003B
+Fecha: 2026-04-07
+Autor: Emily Lorena Cerqueiro Machado
+Estado: IMPLEMENTADO
+Titulo: Ajuste de pares para fidelidad MATLAB (strategy no bloqueante + fallback de fitness controlado)
+================================================================================
+
+1) Cambios por fichero
+- MEIGO_py/ess/combination.py
+  - Cambio: strategy queda como guard opcional no bloqueante.
+  - Cambio: fitness solo se usa como fallback cuando faltan idx_r1/idx_r2 o no encajan con idx_all.
+- MEIGO_py/tests/test_combine.py
+  - Cambio: nuevos tests para guard no bloqueante y fallback por mismatch de indices.
+
+2) Decision y motivo (1-3 lineas)
+- Decision: reducir diferencias innecesarias con MATLAB en la gobernanza de pares.
+- Motivo: mantener prioridad estructural por indices RefSet y usar fitness solo cuando sea necesario.
+
+3) Referencia al codigo MATLAB/R original
+- MATLAB: MEIGO_matlab/eSS/ssm_combination.m.
+- R: No aplica.
+
+4) Observaciones sobre la implementacion original (MATLAB)
+- MATLAB no usa parametro strategy.
+- La pertenencia a RefSet1/RefSet2 se decide por indices.
+
+5) Implicaciones al trasladar a Python
+- strategy invalido no bloquea: se aplica comportamiento estructurado por defecto.
+- fallback por fitness activado solo en los dos casos definidos.
+
+6) Ventajas de Python implementadas aqui
+- API tolerante sin romper ejecucion.
+- Regla de fallback explicita y testeada.
+
+7) Desventajas / limitaciones respecto a MATLAB
+- Sigue pendiente la parte completa de evaluacion/ssm_beyond fuera de este cambio.
+
+8) Tests y evidencia
+- python -m pytest tests/test_combine.py -v
+- python -m examples.change_runners
+
+9) Conclusion matematica del procedimiento
+- No cambia el nucleo geometrico de candidatos; cambia solo la politica de seleccion/fallback.
+
+10) Pendientes / riesgos / proximos pasos
+- Pendiente: ampliar paridad MATLAB en fases siguientes (evaluacion y beyond).
+--------------------------------------------------------------------------------
+FIN CHANGE-003B
+--------------------------------------------------------------------------------
+
+================================================================================
+CHANGE-003C
+Fecha: 2026-04-08
+Autor: Emily Lorena Cerqueiro Machado
+Estado: IMPLEMENTADO
+Titulo: ssm_combination modular completo (par-level + refset-driver + eval callback + beyond)
+================================================================================
+
+1) Cambios por fichero
+- MEIGO_py/ess/combination.py
+  - Cambio: Implementacion pair-level fiel a logica MATLAB para combinacion:
+    - build_v_vectors (v1..v5)
+    - correccion probabilistica de bounds con prob_bound
+    - ramas por pair_type (R1-R1=4, R2-R2=2, mixto=3)
+    - evaluacion por callback eval_fn con filtro include
+    - ssm_beyond_pair con flujo de mejora iterativa
+  - Cambio: Driver refset-level ssm_combination_refset desacoplado de ess/main.py.
+  - Compatibilidad: se mantienen funciones previas (build_combination_pairs, combine_pair_core, generate_candidates_from_refset).
+- MEIGO_py/tests/test_combine.py
+  - Cambio: tests de paridad por semilla (golden) para bounds probabilisticos, rama R2-R2, flujo eval/filtro, condicion de beyond y driver refset.
+- MEIGO_py/examples/change_runners.py
+  - Cambio: runner run_change_003c con trazabilidad de v1..v5, pares, evaluaciones y salida final.
+
+2) Decision y motivo (1-3 lineas)
+- Decision: completar CHANGE-003C con fidelidad funcional a ssm_combination.m y ssm_beyond.m sin acoplar a main.py.
+- Motivo: preparar base reutilizable para eSS/CeSS/cVNS manteniendo legibilidad y trazabilidad.
+
+3) Referencia al codigo MATLAB/R original
+- MATLAB: MEIGO_matlab/eSS/ssm_combination.m
+- MATLAB: MEIGO_matlab/eSS/ssm_beyond.m
+- R: No aplica.
+
+4) Observaciones sobre la implementacion original (MATLAB)
+- Orden replicado: v1..v5 -> bounds probabilisticos -> ramas 4/2/3 -> evaluacion/filtro -> beyond condicional.
+- R2-R2 incluye eleccion aleatoria de rama (a < 0.5).
+- El valor de padres (x1_val/x2_val) participa en condicion de mejora hacia beyond.
+
+5) Implicaciones al trasladar a Python
+- Equivalencia exacta: estructura de ramas, correccion probabilistica, condicion de activacion de beyond.
+- Adaptacion: evaluacion desacoplada por eval_fn callback (en lugar de ssm_evalfc interno).
+- Adaptacion: salida en dict/arrays NumPy para trazabilidad y tests.
+
+6) Ventajas de Python implementadas aqui
+- Modularidad clara (pair-level y refset-level).
+- Reproducibilidad con rng explicito.
+- Tests golden de regresion por seed fija.
+
+7) Desventajas / limitaciones respecto a MATLAB
+- La fidelidad de constraints/penalty depende de como se implemente eval_fn.
+- No se integra aun en loop principal eSS (por alcance).
+
+8) Tests y evidencia
+- python -m pytest tests/test_combine.py -v
+- Resultado: 13 passed in 0.29s.
+- Incluye cobertura previa y nuevos tests de CHANGE-003C.
+
+9) Conclusion matematica del procedimiento
+- Se implementa recombinacion + trascendencia (beyond) con la misma logica de decision de MATLAB, separando la evaluacion para mantener modularidad.
+
+10) Pendientes / riesgos / proximos pasos
+- Pendiente: definir eval_fn de produccion equivalente a ssm_evalfc para constraints/penalty.
+- Proximo paso: integracion gradual en kernel eSS en cambio posterior sin romper desacople.
+--------------------------------------------------------------------------------
+FIN CHANGE-003C
+--------------------------------------------------------------------------------
