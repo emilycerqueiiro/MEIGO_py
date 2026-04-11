@@ -3,14 +3,6 @@ import numpy as np
 from .utils import project_bounds
 
 
-def _as_rng(rng=None):
-    return rng if rng is not None else np.random.default_rng()
-
-
-def _midpoint(a, b):
-    return 0.5 * (a + b)
-
-
 def _remove_rows_equal_to_any(points, reference_rows):
     if points.size == 0:
         return points
@@ -19,10 +11,6 @@ def _remove_rows_equal_to_any(points, reference_rows):
         if np.any(np.all(np.isclose(reference_rows, p), axis=1)):
             keep[i] = False
     return points[keep]
-
-
-def _random_segment_point(a, b, rng):
-    return a + (b - a) * rng.random(a.shape[0])
 
 
 def _parse_eval_output(result):
@@ -74,7 +62,7 @@ def build_v_vectors(x1, x2, x_L, x_U, rng=None, prob_bound=0.5):
     """
     Build v1..v5 with probabilistic bound correction (MATLAB-like).
     """
-    rng = _as_rng(rng)
+    rng = rng if rng is not None else np.random.default_rng()
     x1 = np.asarray(x1, dtype=float)
     x2 = np.asarray(x2, dtype=float)
     x_L = np.asarray(x_L, dtype=float)
@@ -155,69 +143,6 @@ def build_combination_pairs(refset, rng=None, max_pairs=None, strategy="structur
         pairs = pairs[: int(max_pairs)]
 
     return {"pairs": pairs, "r1_pos": r1_pos, "r2_pos": r2_pos, "source": source}
-
-
-def _pair_combinations_from_v(v, x1, x2, x1_val, x2_val, pair_type, rng):
-    """
-    Build C candidates and parent references exactly by pair branch (4/2/3).
-    """
-    c_list = []
-    p_list = []
-    pval_list = []
-    r2r2_branch = None
-
-    if pair_type == "r1_r1":
-        c_list.append(_random_segment_point(v[0], v[1], rng))
-        p_list.append(x1)
-        pval_list.append(x1_val)
-
-        c_list.append(_random_segment_point(v[1], v[2], rng))
-        p_list.append(x1)
-        pval_list.append(x1_val)
-
-        c_list.append(_random_segment_point(v[3], v[4], rng))
-        p_list.append(x2)
-        pval_list.append(x2_val)
-
-        c_list.append(_random_segment_point(v[2], v[3], rng))
-        p_list.append(x2)
-        pval_list.append(x2_val)
-
-    elif pair_type == "r2_r2":
-        c_list.append(_random_segment_point(v[1], v[2], rng))
-        p_list.append(x1)
-        pval_list.append(x1_val)
-
-        a = rng.random()
-        if a < 0.5:
-            c_list.append(_random_segment_point(v[1], v[0], rng))
-            p_list.append(x1)
-            pval_list.append(x1_val)
-            r2r2_branch = "left"
-        else:
-            c_list.append(_random_segment_point(v[3], v[4], rng))
-            p_list.append(x2)
-            pval_list.append(x2_val)
-            r2r2_branch = "right"
-
-    elif pair_type == "mixed":
-        c_list.append(_random_segment_point(v[1], v[0], rng))
-        p_list.append(x1)
-        pval_list.append(x1_val)
-
-        c_list.append(_random_segment_point(v[1], v[2], rng))
-        p_list.append(x1)
-        pval_list.append(x1_val)
-
-        c_list.append(_random_segment_point(v[3], v[4], rng))
-        p_list.append(x2)
-        pval_list.append(x2_val)
-    else:
-        raise ValueError("pair_type must be one of: 'r1_r1', 'r2_r2', 'mixed'.")
-
-    return c_list, p_list, pval_list, r2r2_branch
-
-
 def ssm_beyond_pair(
     z1,
     z2,
@@ -232,7 +157,7 @@ def ssm_beyond_pair(
     """
     MATLAB-like ssm_beyond (ssm_trascender) using eval callback.
     """
-    rng = _as_rng(rng)
+    rng = rng if rng is not None else np.random.default_rng()
     z1 = np.asarray(z1, dtype=float)
     z2 = np.asarray(z2, dtype=float)
     x_L = np.asarray(x_L, dtype=float)
@@ -253,7 +178,7 @@ def ssm_beyond_pair(
         zv1 = z2
         zv2 = _probabilistic_bound_correction(z2 + d, x_L, x_U, rng, prob_bound)
 
-        xnew = _random_segment_point(zv1, zv2, rng)
+        xnew = zv1 + (zv2 - zv1) * rng.random(zv1.shape[0])
 
         include, val_penalty, payload = _parse_eval_output(eval_fn(xnew))
         n_eval += 1
@@ -300,16 +225,63 @@ def ssm_combination_pair(
     """
     Pair-level MATLAB-like combination flow with eval and optional beyond.
     """
-    rng = _as_rng(rng)
+    rng = rng if rng is not None else np.random.default_rng()
     x1 = np.asarray(x1, dtype=float)
     x2 = np.asarray(x2, dtype=float)
     x_L = np.asarray(x_L, dtype=float)
     x_U = np.asarray(x_U, dtype=float)
 
     v = build_v_vectors(x1, x2, x_L, x_U, rng=rng, prob_bound=prob_bound)
-    c_list, p_list, pval_list, r2r2_branch = _pair_combinations_from_v(
-        v, x1, x2, float(x1_val), float(x2_val), pair_type, rng
-    )
+    c_list = []
+    p_list = []
+    pval_list = []
+    r2r2_branch = None
+
+    if pair_type == "r1_r1":
+        c_list.append(v[0] + (v[1] - v[0]) * rng.random(x1.shape[0]))
+        p_list.append(x1)
+        pval_list.append(float(x1_val))
+
+        c_list.append(v[1] + (v[2] - v[1]) * rng.random(x1.shape[0]))
+        p_list.append(x1)
+        pval_list.append(float(x1_val))
+
+        c_list.append(v[3] + (v[4] - v[3]) * rng.random(x1.shape[0]))
+        p_list.append(x2)
+        pval_list.append(float(x2_val))
+
+        c_list.append(v[2] + (v[3] - v[2]) * rng.random(x1.shape[0]))
+        p_list.append(x2)
+        pval_list.append(float(x2_val))
+    elif pair_type == "r2_r2":
+        c_list.append(v[1] + (v[2] - v[1]) * rng.random(x1.shape[0]))
+        p_list.append(x1)
+        pval_list.append(float(x1_val))
+
+        if rng.random() < 0.5:
+            c_list.append(v[1] + (v[0] - v[1]) * rng.random(x1.shape[0]))
+            p_list.append(x1)
+            pval_list.append(float(x1_val))
+            r2r2_branch = "left"
+        else:
+            c_list.append(v[3] + (v[4] - v[3]) * rng.random(x1.shape[0]))
+            p_list.append(x2)
+            pval_list.append(float(x2_val))
+            r2r2_branch = "right"
+    elif pair_type == "mixed":
+        c_list.append(v[1] + (v[0] - v[1]) * rng.random(x1.shape[0]))
+        p_list.append(x1)
+        pval_list.append(float(x1_val))
+
+        c_list.append(v[1] + (v[2] - v[1]) * rng.random(x1.shape[0]))
+        p_list.append(x1)
+        pval_list.append(float(x1_val))
+
+        c_list.append(v[3] + (v[4] - v[3]) * rng.random(x1.shape[0]))
+        p_list.append(x2)
+        pval_list.append(float(x2_val))
+    else:
+        raise ValueError("pair_type must be one of: 'r1_r1', 'r2_r2', 'mixed'.")
 
     n_eval = 0
     n_beyond_calls = 0
@@ -385,7 +357,7 @@ def ssm_combination_refset(
     """
     RefSet-level driver for MATLAB-like pair combination + evaluation flow.
     """
-    rng = _as_rng(rng)
+    rng = rng if rng is not None else np.random.default_rng()
     x_ref = np.asarray(refset["x"], dtype=float)
     f_ref = np.asarray(refset["f"], dtype=float)
 
@@ -469,10 +441,10 @@ def combine_pair_core(x1, x2, x_L, x_U, pair_type, f1=None, f2=None, include_par
     if pair_type == "r1_r1":
         candidates = np.array(
             [
-                _midpoint(v1, v2),
-                _midpoint(v2, v3),
-                _midpoint(v3, v4),
-                _midpoint(v4, v5),
+                0.5 * (v1 + v2),
+                0.5 * (v2 + v3),
+                0.5 * (v3 + v4),
+                0.5 * (v4 + v5),
             ],
             dtype=float,
         )
@@ -481,10 +453,10 @@ def combine_pair_core(x1, x2, x_L, x_U, pair_type, f1=None, f2=None, include_par
             side = "left"
         else:
             side = "left" if f1 <= f2 else "right"
-        second = _midpoint(v1, v2) if side == "left" else _midpoint(v4, v5)
-        candidates = np.array([_midpoint(v2, v3), second], dtype=float)
+        second = 0.5 * (v1 + v2) if side == "left" else 0.5 * (v4 + v5)
+        candidates = np.array([0.5 * (v2 + v3), second], dtype=float)
     elif pair_type == "mixed":
-        candidates = np.array([_midpoint(v1, v2), _midpoint(v2, v3), _midpoint(v4, v5)], dtype=float)
+        candidates = np.array([0.5 * (v1 + v2), 0.5 * (v2 + v3), 0.5 * (v4 + v5)], dtype=float)
     else:
         raise ValueError("pair_type must be one of: 'r1_r1', 'r2_r2', 'mixed'.")
 
