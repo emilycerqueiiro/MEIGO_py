@@ -364,3 +364,62 @@ Titulo: ssm_combination modular completo (par-level + refset-driver + eval callb
 --------------------------------------------------------------------------------
 FIN CHANGE-003C
 --------------------------------------------------------------------------------
+
+================================================================================
+CHANGE-003C2
+Fecha: 2026-04-08
+Autor: Emily Lorena Cerqueiro Machado
+Estado: IMPLEMENTADO
+Titulo: Simplificacion estructural de combination.py con prioridad de fidelidad MATLAB
+================================================================================
+
+1) Cambios por fichero
+- MEIGO_py/ess/combination.py
+  - Cambio: Refactor conservador para reducir fragmentacion interna sin alterar comportamiento.
+  - Cambio: Se eliminan helpers triviales (_as_rng, _midpoint, _random_segment_point, _pair_combinations_from_v).
+  - Cambio: La logica de combinacion pair-level se reagrupa dentro de ssm_combination_pair para que el flujo se lea mas cerca de ssm_combination.m.
+- MEIGO_py/changes-py.txt
+  - Cambio: Registro del refactor y su motivacion.
+
+2) Decision y motivo (1-3 lineas)
+- Decision: simplificar la estructura interna del modulo manteniendo la API publica y la logica funcional actual.
+- Motivo: el codigo previo funcionaba, pero tenia demasiado ruido estructural para una pieza que debe leerse cerca del original MATLAB.
+
+3) Referencia al codigo MATLAB/R original
+- MATLAB: MEIGO_matlab/eSS/ssm_combination.m
+- MATLAB: MEIGO_matlab/eSS/ssm_beyond.m
+- R: No aplica.
+
+4) Observaciones sobre la implementacion original (MATLAB)
+- MATLAB concentra mas logica dentro de pocas funciones grandes.
+- El refactor busca acercarse a esa lectura, sin perder las ventajas minimas necesarias de Python.
+
+5) Implicaciones al trasladar a Python
+- Se mantiene modularidad util:
+  - seleccion de pares RefSet
+  - construccion de v1..v5
+  - combinacion pair-level
+  - beyond
+  - driver refset-level
+- Se elimina modularidad decorativa que no aportaba claridad.
+
+6) Ventajas de Python implementadas aqui
+- Misma funcionalidad con menos ruido visual.
+- Flujo principal mas facil de seguir y mas cercano a MATLAB.
+
+7) Desventajas / limitaciones respecto a MATLAB
+- Se mantienen adaptaciones Python ya existentes (eval_fn, dict outputs), porque si aportan valor real de integracion.
+
+8) Tests y evidencia
+- python -m pytest tests/test_combine.py -v -> 13 passed
+- python -c "from examples.change_runners import run_ai_change; run_ai_change('3c')" -> misma salida observable que antes del refactor
+
+9) Conclusion matematica del procedimiento
+- No cambia la matematica del algoritmo; el cambio es estructural y de legibilidad.
+
+10) Pendientes / riesgos / proximos pasos
+- Pendiente: mantener este criterio en cambios futuros (fidelidad MATLAB primero, menos funciones pero mejor delimitadas).
+- Riesgo: volver a fragmentar el modulo al ampliar funcionalidad; mitigacion: revisar cada helper nuevo por necesidad real.
+--------------------------------------------------------------------------------
+FIN CHANGE-003C2
+--------------------------------------------------------------------------------
