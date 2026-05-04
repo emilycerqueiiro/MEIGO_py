@@ -236,6 +236,32 @@ def test_beyond_called_only_when_matlab_condition_holds():
     assert out["n_beyond_calls"] == 2
 
 
+def test_eval_fn_must_return_dict():
+    rng = np.random.default_rng(3)
+
+    def eval_fn(_x):
+        return 1.0
+
+    try:
+        ssm_combination_pair(
+            x1=np.array([0.0, 0.0]),
+            x2=np.array([1.0, 1.0]),
+            x1_val=1.0,
+            x2_val=2.0,
+            pair_type="mixed",
+            x_L=np.array([-2.0, -2.0]),
+            x_U=np.array([2.0, 2.0]),
+            eval_fn=eval_fn,
+            rng=rng,
+            prob_bound=0.5,
+            enable_beyond=False,
+        )
+    except TypeError as exc:
+        assert "eval_fn must return a dict" in str(exc)
+    else:
+        raise AssertionError("Expected TypeError when eval_fn does not return a dict.")
+
+
 def test_refset_driver_full_flow_seeded_golden():
     rng = np.random.default_rng(5)
 

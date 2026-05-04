@@ -423,3 +423,62 @@ Titulo: Simplificacion estructural de combination.py con prioridad de fidelidad 
 --------------------------------------------------------------------------------
 FIN CHANGE-003C2
 --------------------------------------------------------------------------------
+================================================================================
+CHANGE-003D
+Fecha: 2026-05-04
+Autor: Emily Lorena Cerqueiro Machado
+Estado: IMPLEMENTADO
+Titulo: Contrato unico de eval_fn y eliminacion de parsing redundante en combination.py
+================================================================================
+
+1) Cambios por fichero
+- MEIGO_py/ess/combination.py
+  - Cambio: Se elimina _parse_eval_output.
+  - Cambio: eval_fn debe devolver obligatoriamente un dict con al menos 'include' y 'val_penalty'.
+  - Cambio: cualquier otro formato de salida falla de forma explicita con TypeError o KeyError.
+- MEIGO_py/tests/test_combine.py
+  - Cambio: nuevo test que fija la decision de contrato unico y verifica fallo explicito si eval_fn no devuelve dict.
+- MEIGO_py/changes-py.txt
+  - Cambio: registro de la decision firme y su motivacion.
+
+2) Decision y motivo (1-3 lineas)
+- Decision: endurecer el contrato de eval_fn y eliminar el parsing flexible de formatos alternativos.
+- Motivo: el repo no usa esos formatos alternativos y mantenerlos solo añade complejidad sin valor real.
+
+3) Referencia al codigo MATLAB/R original
+- MATLAB: MEIGO_matlab/eSS/ssm_combination.m
+- MATLAB: MEIGO_matlab/eSS/ssm_beyond.m
+- R: No aplica.
+
+4) Observaciones sobre la implementacion actual
+- Las implementaciones reales localizadas en tests y runners devuelven dict.
+- No hay usos reales de float, tuple o list como salida de eval_fn.
+
+5) Implicaciones al trasladar a Python
+- Se mantiene el callback eval_fn como adaptacion Python.
+- Se elimina flexibilidad innecesaria de formato.
+- El usuario se adapta a un contrato fijo y explicito.
+
+6) Ventajas de Python implementadas aqui
+- Menos ramas de control.
+- Menor ambiguedad.
+- Integracion y tests mas claros.
+
+7) Desventajas / limitaciones respecto a MATLAB
+- Sigue siendo una adaptacion Python porque MATLAB usa interfaz interna fija, no callback.
+- No cambia la fidelidad algoritmica, solo el contrato de integracion.
+
+8) Tests y evidencia
+- python -m pytest tests/test_combine.py -v
+- python -c "from examples.change_runners import run_ai_change; run_ai_change('3c')"
+
+9) Conclusion matematica del procedimiento
+- No cambia la matematica del algoritmo; solo se endurece el contrato de evaluacion y se elimina ruido de implementacion.
+
+10) Pendientes / riesgos / proximos pasos
+- Riesgo: romper integraciones futuras que intenten devolver formatos distintos.
+- Mitigacion: fallo explicito temprano y contrato documentado.
+- Proximo paso: seguir revisando helpers y metadatos no algoritimicos que puedan simplificarse.
+--------------------------------------------------------------------------------
+FIN CHANGE-003D
+--------------------------------------------------------------------------------
