@@ -13,31 +13,6 @@ def _remove_rows_equal_to_any(points, reference_rows):
     return points[keep]
 
 
-def _parse_eval_output(result):
-    """
-    Normalize eval callback output to (include, val_penalty, payload).
-    """
-    if isinstance(result, dict):
-        include = bool(result.get("include", True))
-        if "val_penalty" in result:
-            val_penalty = float(result["val_penalty"])
-        elif "value" in result:
-            val_penalty = float(result["value"])
-        elif "f" in result:
-            val_penalty = float(result["f"])
-        else:
-            val_penalty = np.inf
-        return include, val_penalty, result
-
-    if isinstance(result, (tuple, list)):
-        if len(result) >= 2 and isinstance(result[0], (bool, np.bool_)):
-            return bool(result[0]), float(result[1]), {"raw": result}
-        if len(result) >= 1:
-            return True, float(result[0]), {"raw": result}
-
-    return True, float(result), {"raw": result}
-
-
 def _probabilistic_bound_correction(x, x_L, x_U, rng, prob_bound):
     """
     MATLAB-like probabilistic correction used in ssm_combination/ssm_beyond.
@@ -180,13 +155,19 @@ def ssm_beyond_pair(
 
         xnew = zv1 + (zv2 - zv1) * rng.random(zv1.shape[0])
 
-        include, val_penalty, payload = _parse_eval_output(eval_fn(xnew))
+        result = eval_fn(xnew)
+        if not isinstance(result, dict):
+            raise TypeError("eval_fn must return a dict with at least 'include' and 'val_penalty'.")
+        if "val_penalty" not in result:
+            raise KeyError("eval_fn result must contain 'val_penalty'.")
+        include = bool(result.get("include", True))
+        val_penalty = float(result["val_penalty"])
         n_eval += 1
 
         if not include:
             break
 
-        new_child_x.append(np.asarray(payload.get("x", xnew), dtype=float))
+        new_child_x.append(np.asarray(result.get("x", xnew), dtype=float))
         new_child_val.append(val_penalty)
 
         if val_penalty < z2_val:
@@ -293,13 +274,19 @@ def ssm_combination_pair(
     first_parent_is_r1 = pair_type in ("r1_r1", "mixed")
 
     for i, c in enumerate(c_list):
-        include, val_penalty, payload = _parse_eval_output(eval_fn(c))
+        result = eval_fn(c)
+        if not isinstance(result, dict):
+            raise TypeError("eval_fn must return a dict with at least 'include' and 'val_penalty'.")
+        if "val_penalty" not in result:
+            raise KeyError("eval_fn result must contain 'val_penalty'.")
+        include = bool(result.get("include", True))
+        val_penalty = float(result["val_penalty"])
         n_eval += 1
 
         if not include:
             continue
 
-        x_eval = np.asarray(payload.get("x", c), dtype=float)
+        x_eval = np.asarray(result.get("x", c), dtype=float)
         accepted_x.append(x_eval)
         accepted_val.append(val_penalty)
 
