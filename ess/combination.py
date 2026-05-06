@@ -156,10 +156,6 @@ def ssm_beyond_pair(
         xnew = zv1 + (zv2 - zv1) * rng.random(zv1.shape[0])
 
         result = eval_fn(xnew)
-        if not isinstance(result, dict):
-            raise TypeError("eval_fn must return a dict with at least 'include' and 'val_penalty'.")
-        if "val_penalty" not in result:
-            raise KeyError("eval_fn result must contain 'val_penalty'.")
         include = bool(result.get("include", True))
         val_penalty = float(result["val_penalty"])
         n_eval += 1
@@ -275,10 +271,6 @@ def ssm_combination_pair(
 
     for i, c in enumerate(c_list):
         result = eval_fn(c)
-        if not isinstance(result, dict):
-            raise TypeError("eval_fn must return a dict with at least 'include' and 'val_penalty'.")
-        if "val_penalty" not in result:
-            raise KeyError("eval_fn result must contain 'val_penalty'.")
         include = bool(result.get("include", True))
         val_penalty = float(result["val_penalty"])
         n_eval += 1

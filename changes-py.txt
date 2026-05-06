@@ -482,3 +482,57 @@ Titulo: Contrato unico de eval_fn y eliminacion de parsing redundante en combina
 --------------------------------------------------------------------------------
 FIN CHANGE-003D
 --------------------------------------------------------------------------------
+================================================================================
+CHANGE-003D2
+Fecha: 2026-05-06
+Autor: Emily Lorena Cerqueiro Machado
+Estado: IMPLEMENTADO
+Titulo: Eliminacion de validaciones defensivas de eval_fn para seguir contrato interno
+================================================================================
+
+1) Cambios por fichero
+- MEIGO_py/ess/combination.py
+  - Cambio: Se eliminan comprobaciones explicitas de tipo y presencia de claves en el resultado de eval_fn.
+  - Cambio: El algoritmo asume directamente el contrato interno acordado: eval_fn devuelve dict con val_penalty y opcionalmente include/x.
+- MEIGO_py/tests/test_combine.py
+  - Cambio: El test asociado deja de esperar un TypeError explicito y pasa a aceptar el fallo natural si eval_fn no respeta el contrato.
+- MEIGO_py/changes-py.txt
+  - Cambio: Registro de esta decision.
+
+2) Decision y motivo (1-3 lineas)
+- Decision: retirar validaciones defensivas innecesarias en el loop principal de combinacion.
+- Motivo: el usuario se adapta al algoritmo y el contrato ya esta fijado; mantener comprobaciones adicionales solo añade ruido.
+
+3) Referencia al codigo MATLAB/R original
+- MATLAB: MEIGO_matlab/eSS/ssm_combination.m
+- MATLAB: MEIGO_matlab/eSS/ssm_beyond.m
+- R: No aplica.
+
+4) Observaciones sobre la implementacion actual
+- El contrato de eval_fn ya se habia fijado en CHANGE-003D.
+- Estas comprobaciones no aportaban logica algoritmica, solo defensa adicional.
+
+5) Implicaciones al trasladar a Python
+- Se asume el contrato directamente en tiempo de ejecucion.
+- Si eval_fn no cumple, el fallo sera natural (por ejemplo AttributeError o KeyError) en lugar de una validacion previa explicita.
+
+6) Ventajas de Python implementadas aqui
+- Menos ruido visual en el loop principal.
+- Flujo mas directo y mas cercano a una traduccion sencilla del algoritmo.
+
+7) Desventajas / limitaciones respecto a MATLAB
+- Se pierde el mensaje de error explicito anterior.
+- El comportamiento sigue siendo correcto si el contrato se respeta.
+
+8) Tests y evidencia
+- python -m pytest tests/test_combine.py -v
+
+9) Conclusion matematica del procedimiento
+- No cambia la matematica ni la logica de combinacion; solo se simplifica el control de contrato.
+
+10) Pendientes / riesgos / proximos pasos
+- Riesgo: errores menos guiados si alguien rompe el contrato de eval_fn.
+- Mitigacion: mantener el contrato documentado en changes-py.txt y en los runners/tests.
+--------------------------------------------------------------------------------
+FIN CHANGE-003D2
+--------------------------------------------------------------------------------

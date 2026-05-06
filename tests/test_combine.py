@@ -236,7 +236,7 @@ def test_beyond_called_only_when_matlab_condition_holds():
     assert out["n_beyond_calls"] == 2
 
 
-def test_eval_fn_must_return_dict():
+def test_eval_fn_non_dict_fails_naturally():
     rng = np.random.default_rng(3)
 
     def eval_fn(_x):
@@ -256,10 +256,10 @@ def test_eval_fn_must_return_dict():
             prob_bound=0.5,
             enable_beyond=False,
         )
-    except TypeError as exc:
-        assert "eval_fn must return a dict" in str(exc)
+    except AttributeError:
+        pass
     else:
-        raise AssertionError("Expected TypeError when eval_fn does not return a dict.")
+        raise AssertionError("Expected natural failure when eval_fn does not return a dict.")
 
 
 def test_refset_driver_full_flow_seeded_golden():
