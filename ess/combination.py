@@ -139,10 +139,20 @@ def generate_candidates_from_refset(
     max_pairs=None,
     strategy="structured",
     deduplicate=True,
+    return_parents=False,
 ):
     """
     Generate deterministic, bounded, unevaluated candidates from RefSet.
     Does not mutate refset and does not evaluate objective functions.
+
+    return_parents=False (default): comportamiento previo. Devuelve solo los candidatos,
+    deduplicados entre pares. Uso no evolutivo.
+
+    return_parents=True: devuelve (candidates, parent_pos) SIN deduplicar entre pares,
+    preservando el vinculo hijo->padre 1:1 que necesita update_refset. Cada candidato se
+    etiqueta con el slot del PEOR padre del par (mayor f); asi el update greedy solo
+    reemplaza ese miembro si el candidato lo mejora, manteniendo monotonia.
+    (Adaptacion Python: el mapeo fiel v1..v5->padre de ess_kernel.m se recuperara en 004C.)
     """
     x_ref = np.asarray(refset["x"], dtype=float)
     f_ref = np.asarray(refset["f"], dtype=float)
@@ -150,6 +160,7 @@ def generate_candidates_from_refset(
     pairing = build_combination_pairs(refset, rng=rng, max_pairs=max_pairs, strategy=strategy)
 
     all_candidates = []
+    parent_pos = []
     for i, j, pair_type in pairing["pairs"]:
         pair_candidates = combine_pair_core(
             x_ref[i],
@@ -163,12 +174,26 @@ def generate_candidates_from_refset(
         )
         if pair_candidates.size > 0:
             all_candidates.append(pair_candidates)
+            worse = i if f_ref[i] >= f_ref[j] else j
+            parent_pos.extend([worse] * pair_candidates.shape[0])
 
     if not all_candidates:
-        return np.empty((0, x_ref.shape[1]), dtype=float)
+        empty = np.empty((0, x_ref.shape[1]), dtype=float)
+        if return_parents:
+            return empty, np.empty((0,), dtype=int)
+        return empty
 
     candidates = np.vstack(all_candidates)
-    candidates = _remove_rows_equal_to_any(candidates, x_ref)
-    if deduplicate and candidates.size > 0:
-        candidates = np.unique(candidates, axis=0)
-    return candidates
+
+    if not return_parents:
+        candidates = _remove_rows_equal_to_any(candidates, x_ref)
+        if deduplicate and candidates.size > 0:
+            candidates = np.unique(candidates, axis=0)
+        return candidates
+
+    parent_pos = np.asarray(parent_pos, dtype=int)
+    keep = np.ones(candidates.shape[0], dtype=bool)
+    for k, p in enumerate(candidates):
+        if np.any(np.all(np.isclose(x_ref, p), axis=1)):
+            keep[k] = False
+    return candidates[keep], parent_pos[keep]

@@ -4,10 +4,11 @@ from ess.refset import create_refset
 from problems.objective_functions import rastrigin
 
 
-def run_ess(obj_func, x_L, x_U, n_initial=20, refset_size=10, max_iter=50):
-    population = generate_diverse_population(n_initial, x_L, x_U)
+def run_ess(obj_func, x_L, x_U, n_initial=20, refset_size=10, max_iter=50, seed=None):
+    rng = np.random.default_rng(seed)
+    population = generate_diverse_population(n_initial, x_L, x_U, rng=rng)
     f_pop = np.array([obj_func(x) for x in population])
-    refset = create_refset(population, f_pop, refset_size)
+    refset = create_refset(population, f_pop, refset_size, rng=rng)
 
     print("[run_ess] Final RefSet ready:")
     print(refset)

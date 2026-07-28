@@ -668,3 +668,98 @@ Titulo: Reparacion de changes-py.txt y sincronizacion de function-ledger.md
 --------------------------------------------------------------------------------
 FIN CHANGE-004B-prep
 --------------------------------------------------------------------------------
+
+================================================================================
+CHANGE-004B
+Fecha: 2026-07-28
+Autor: Emily Lorena Cerqueiro Machado
+Estado: IMPLEMENTADO
+Titulo: Inicializacion fiel a ess_kernel.m (x_0/f_0, RefSet2 aleatorio) + update_refset greedy por slot
+================================================================================
+
+1) Cambios por fichero
+- MEIGO_py/ess/refset.py
+  - Cambio: create_refset selecciona RefSet2 de forma ALEATORIA (rng.permutation), fiel a
+    ess_kernel.m L668-677; nueva firma create_refset(population, obj_func, refset_size,
+    refset1_size=None, rng=None). rng es keyword opcional (compatibilidad hacia atras).
+  - Cambio: select_most_diverse se CONSERVA (uso futuro en filtros de busqueda local).
+  - Nuevo: update_refset(refset, cand_x, cand_f, parent_pos) -> (new_refset, info).
+    * Greedy por slot: el candidato reemplaza al miembro parent_pos[j] si lo mejora
+      (ess_kernel.m L870-881); si varios apuntan al mismo slot, gana el menor.
+    * Reordena por f ascendente al final (L710-714). info: 'changed' (bool alineado al
+      RefSet reordenado) y 'n_changed'.
+- MEIGO_py/ess/combination.py
+  - Cambio: generate_candidates_from_refset gana return_parents (por defecto False, que
+    mantiene el comportamiento previo deduplicado). Con return_parents=True devuelve
+    (candidates, parent_pos) SIN deduplicar entre pares, preservando el vinculo hijo->padre.
+    Cada candidato se etiqueta con el slot del peor padre del par (mayor f).
+- MEIGO_py/ess/main.py
+  - Nuevo: ess_init(problem, opts, rng) -> dict de estado inicial (NO state.py). Incorpora
+    x_0/f_0 (L586-631), genera poblacion diversa, evalua, construye RefSet inicial, calcula
+    fbest/xbest e inicializa trazas estilo MATLAB (results con f, x, neval, numeval).
+  - Nuevo: _default_dim_refset (formula de dim_refset de ess_kernel.m L337-341).
+  - ess_kernel_min se conserva intacto como baseline.
+- MEIGO_py/run_ess.py
+  - Cambio: run_ess pasa rng a generate_diverse_population y create_refset (reproducibilidad);
+    nuevo parametro seed.
+- MEIGO_py/tests/test_refset.py
+  - Cambio: test_refset2_diversity_beats_random reemplazado por
+    test_refset2_is_random_subset_of_remaining_and_reproducible.
+  - Cambio: tests de create_refset pasan rng explicito.
+  - Nuevo: tests de update_refset (mejora-only, mejor-por-slot, sin-candidatos).
+- MEIGO_py/tests/test_init.py (NUEVO)
+  - Nuevo: tests de ess_init (tamanos y reproducibilidad, x_0 con f_0 sin reevaluar,
+    x_0 sin f_0 evaluado).
+
+2) Decision y motivo (1-3 lineas)
+- Decision: completar la fase previa al bucle con fidelidad a ess_kernel.m y dejar update_refset
+  como pieza reusable, con el vinculo hijo->padre necesario para un update greedy fiel.
+- Motivo: preparar el primer paso iterativo con estructuras 1:1 respecto a MATLAB sin abrir aun
+  bucle, gemelos, beyond ni busqueda local.
+
+3) Referencia al codigo MATLAB/R original
+- MATLAB: MEIGO64-master/MEIGO/eSS/ess_kernel.m
+  * L337-341 (dim_refset automatico), L586-631 (x_0/f_0), L655-677 (RefSet inicial),
+    L704-714 (Results + sort), L870-881 (update greedy por indice de padre).
+- R: No aplica.
+
+4) Observaciones sobre la implementacion original (MATLAB)
+- No existe update_refset: la actualizacion es inline y greedy por slot de padre.
+- RefSet2 se elige por randperm (aleatorio), no por diversidad maximin.
+- fbest/xbest se calculan sobre miembros factibles (aqui, sin constraints, sobre todos).
+
+5) Implicaciones al trasladar a Python
+- create_refset requiere rng para reproducibilidad del RefSet2 aleatorio (keyword opcional).
+- El estado inicial se modela como dict, sin introducir state.py.
+- generate_candidates_from_refset expone parent_pos; el mapeo fiel v1..v5->padre se difiere a 004C.
+
+6) Ventajas de Python implementadas aqui
+- update_refset reusable y testeable, reutilizable en CeSS/cVNS.
+- Estado inicial explicito en dict, facil de inspeccionar y testear.
+- Reproducibilidad controlada via rng.
+
+7) Desventajas / limitaciones respecto a MATLAB
+- Sin constraints/penalizacion (fbest factible aproximado por f directa en esta fase).
+- Sin bucle, sin gemelos, sin ssm_beyond, sin busqueda local.
+- La combinacion sigue siendo determinista y no evaluativa; su integracion evolutiva es 004C.
+
+8) Tests y evidencia
+- pytest no disponible en el entorno; validacion con runner de humo temporal (eliminado):
+  * tests/test_refset.py: 6 passed.
+  * tests/test_init.py: 3 passed.
+  * integracion combination(return_parents)->update_refset: 1 passed (RefSet ordenado,
+    mejor no empeora).
+  * tests/test_combine.py (ruta por defecto): 5 passed (test con monkeypatch omitido, requiere pytest).
+
+9) Conclusion matematica del procedimiento
+- Se construye el RefSet inicial (calidad + azar) y se define la actualizacion greedy por slot,
+  que garantiza monotonia no creciente del valor por miembro, base del refinamiento iterativo.
+
+10) Pendientes / riesgos / proximos pasos
+- Proximo paso (004C): recuperar/reconstruir la combinacion evaluativa (eval_fn, prob_bound,
+  ssm_beyond) e integrarla con update_refset para el primer flujo iterativo completo.
+- Riesgo: el mapeo candidato->padre por "peor padre" es una simplificacion; se reemplazara por
+  el mapeo v1..v5 fiel en 004C.
+--------------------------------------------------------------------------------
+FIN CHANGE-004B
+--------------------------------------------------------------------------------
