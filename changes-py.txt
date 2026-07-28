@@ -744,12 +744,13 @@ Titulo: Inicializacion fiel a ess_kernel.m (x_0/f_0, RefSet2 aleatorio) + update
 - La combinacion sigue siendo determinista y no evaluativa; su integracion evolutiva es 004C.
 
 8) Tests y evidencia
-- pytest no disponible en el entorno; validacion con runner de humo temporal (eliminado):
-  * tests/test_refset.py: 6 passed.
-  * tests/test_init.py: 3 passed.
-  * integracion combination(return_parents)->update_refset: 1 passed (RefSet ordenado,
-    mejor no empeora).
-  * tests/test_combine.py (ruta por defecto): 5 passed (test con monkeypatch omitido, requiere pytest).
+- pytest instalado a peticion del usuario (pytest 9.1.1).
+- python -m pytest -q (desde MEIGO_py): 19 passed in ~0.7s.
+  * Incluye tests/test_refset.py (RefSet2 aleatorio + update_refset), tests/test_init.py
+    (ess_init con x_0/f_0), tests/test_combine.py (incl. el test con monkeypatch de no-evaluacion,
+    ahora ejecutable), y la suite previa (test_ess_serial_min, test_objectives).
+- Validacion adicional durante desarrollo: runner de humo temporal (eliminado, no commiteado)
+  incluyendo la integracion combination(return_parents)->update_refset (RefSet ordenado, mejor no empeora).
 
 9) Conclusion matematica del procedimiento
 - Se construye el RefSet inicial (calidad + azar) y se define la actualizacion greedy por slot,
