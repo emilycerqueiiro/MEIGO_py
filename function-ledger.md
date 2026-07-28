@@ -23,7 +23,7 @@ Registro centralizado de todas las funciones propias (OWN) y externas relevantes
 ## 1. Core eSS / Kernels
 
 ### OWN ess_kernel_min (L2)
-**Dónde se usa:** `ess/main.py:ess_kernel_min` (líneas 121–156)
+**Dónde se usa:** `ess/main.py:ess_kernel_min`
 
 **Origen:** AI-CHANGE-001
 
@@ -171,7 +171,7 @@ pop = generate_diverse_population(20, [-5, -5], [5, 5], seed=42)
 ## 4. Evaluación / Bounds / Penalizaciones
 
 ### OWN evaluate (L1)
-**Dónde se usa:** `ess/utils.py:evaluate` (líneas 1–8)
+**Dónde se usa:** `ess/utils.py:evaluate`
 
 **Origen:** AI-CHANGE-001
 
@@ -203,7 +203,7 @@ result = evaluate(sphere, np.array([1, 2]))
 ---
 
 ### OWN project_bounds (L1)
-**Dónde se usa:** `ess/utils.py:project_bounds` (líneas 10–20)
+**Dónde se usa:** `ess/utils.py:project_bounds`
 
 **Origen:** AI-CHANGE-001 (importado de `problems/utils.py`)
 
@@ -326,7 +326,7 @@ sample = rng.uniform([0, -5], [1, 5], size=(10, 2))  # (10, 2) en [0, 1] x [-5, 
 ---
 
 ### EXT np.argsort (L1)
-**Dónde se usa:** `ess/refset.py:create_refset` (línea ~62)
+**Dónde se usa:** `ess/refset.py:create_refset`
 
 **Origen:** AI-CHANGE-001
 
@@ -357,7 +357,7 @@ idx = np.argsort(f_pop)  # [3, 1, 0, 2]
 ---
 
 ### EXT np.linalg.norm (L2)
-**Dónde se usa:** `ess/refset.py:select_most_diverse` (línea ~103)
+**Dónde se usa:** `ess/refset.py:select_most_diverse`
 
 **Origen:** AI-CHANGE-001
 
@@ -389,7 +389,7 @@ dist = np.linalg.norm(c - r)  # sqrt((3-1)^2 + (4-1)^2) = 3.6...
 ---
 
 ### EXT np.vstack (L1)
-**Dónde se usa:** `ess/refset.py:create_refset` (línea ~79)
+**Dónde se usa:** `ess/refset.py:create_refset`
 
 **Origen:** AI-CHANGE-001
 
@@ -419,7 +419,7 @@ combined = np.vstack([ref1, ref2])  # (3, 2)
 ---
 
 ### EXT np.concatenate (L1)
-**Dónde se usa:** `ess/refset.py:create_refset` (línea ~80)
+**Dónde se usa:** `ess/refset.py:create_refset`
 
 **Origen:** AI-CHANGE-001
 
@@ -448,7 +448,7 @@ f_all = np.concatenate([f1, f2])  # [1.0, 2.0, 3.0]
 ---
 
 ### EXT np.delete (L2)
-**Dónde se usa:** `ess/refset.py:select_most_diverse` (línea ~108, 109)
+**Dónde se usa:** `ess/refset.py:select_most_diverse`
 
 **Origen:** AI-CHANGE-001
 
