@@ -59,7 +59,7 @@ results = ess_kernel_min(problem, opts)
 ## 2. RefSet / Diversidad / Distancias
 
 ### OWN create_refset (L2)
-**Dónde se usa:** `ess/main.py:create_refset` (líneas 58–85)
+**Dónde se usa:** `ess/refset.py:create_refset`
 
 **Origen:** AI-CHANGE-001
 
@@ -96,7 +96,7 @@ refset = create_refset(population, f_pop, refset_size=4)
 ---
 
 ### OWN select_most_diverse (L3)
-**Dónde se usa:** `ess/main.py:select_most_diverse` (líneas 88–112)
+**Dónde se usa:** `ess/refset.py:select_most_diverse`
 
 **Origen:** AI-CHANGE-001
 
@@ -131,37 +131,35 @@ diverse, idx = select_most_diverse(candidates, reference, k=1, candidate_indices
 
 ---
 
-### OWN generate_initial_population (L1)
-**Dónde se usa:** `ess/main.py:generate_initial_population` (líneas 4–20)
+### OWN generate_diverse_population (L2)
+**Dónde se usa:** `ess/population.py:generate_diverse_population`
 
-**Origen:** AI-CHANGE-001
+**Origen:** CHANGE-004A (unificación de la generación inicial; sustituye a `generate_initial_population`, eliminada).
 
-**Qué hace:** Genera población inicial de `pop_size` puntos mediante muestreo uniforme aleatorio dentro de bounds.
+**Qué hace:** Genera la población inicial diversa dentro de `[x_L, x_U]` mediante muestreo estratificado por frecuencia: los primeros bloques cubren el rango en cuartos y el resto se muestrea con probabilidad inversa a la frecuencia de uso de cada subintervalo (equivalente conceptual a `ssm_diverse`).
 
-**Por qué se usa aquí:** Versión **mínima** para tests unitarios (refset, distancias). Para eSS estándar con diversificación inteligente, usa `generate_diverse_population` (en `ess/population.py`).
+**Por qué se usa aquí:** Es la **única** política de generación inicial de eSS tras CHANGE-004A; mejora la cobertura del espacio frente al muestreo uniforme puro.
 
 **Inputs & shapes:**
-- `rng` (np.random.Generator, opcional): generador de números aleatorios.
-- `pop_size` (int): número de individuos.
+- `n_points` (int): número de puntos.
 - `x_L, x_U` (ndarray): `(dim,)` — bounds.
-- `opts` (dict, opcional): `{'seed': int}`.
+- `rng` (np.random.Generator, opcional) o `seed` (int, opcional).
 
 **Outputs & shapes:**
-- `population` (ndarray): `(pop_size, dim)`
+- `population` (ndarray): `(n_points, dim)` dentro de bounds.
 
 **Ejemplo mínimo:**
 ```python
-pop = generate_initial_population(pop_size=5, x_L=[-1, -1], x_U=[1, 1], opts={'seed': 42})
-# pop.shape == (5, 2), valores uniformes en [-1, 1]^2
+pop = generate_diverse_population(20, [-5, -5], [5, 5], seed=42)
+# pop.shape == (20, 2)
 ```
 
 **Pitfalls:**
-- Si `rng=None` y `opts=None`, usa seed por defecto 42 (determinístico, pero sin control del usuario).
-- Muestreo uniforme puro no garantiza diversidad global; usa `generate_diverse_population` si necesitas adaptatividad.
-- `rng.uniform(x_L, x_U, size=(pop_size, dim))` requiere `x_L` y `x_U` como arrays del mismo shape; convertir explícitamente con `np.array()`.
-- No maneja variables enteras/categóricas.
+- Si `rng=None` y `seed=None`, el resultado no es reproducible.
+- Usa 4 subintervalos por dimensión (`freq` de shape `(dim, 4)`); no maneja variables enteras/categóricas.
+- La diversificación es independiente por dimensión (no acopla dimensiones entre sí).
 
-**Impacto en eSS/VNS:** Inicialización básica; clave para reproducibilidad en tests y baselines.
+**Impacto en eSS/VNS:** Inicialización estándar de eSS; base de la fase previa al RefSet.
 
 ---
 
@@ -241,7 +239,7 @@ x_proj = project_bounds(x, x_L, x_U)
 ## 5. RNG / Muestreo / Inicialización
 
 ### OWN proyecto (seed coordination) (L1)
-**Dónde se usa:** `ess/main.py:ess_kernel_min`, `ess/main.py:generate_initial_population`, `tests/test_refset.py`
+**Dónde se usa:** `ess/main.py:ess_kernel_min`, `ess/population.py:generate_diverse_population`, `tests/test_refset.py`
 
 **Origen:** AI-CHANGE-002 (seed consistency refactor)
 
@@ -267,7 +265,7 @@ rng = np.random.default_rng(seed)
 ## 6. Externas clave (NumPy/SciPy)
 
 ### EXT np.random.default_rng (L2)
-**Dónde se usa:** `ess/main.py:ess_kernel_min`, `ess/main.py:generate_initial_population`, `tests/test_refset.py`
+**Dónde se usa:** `ess/main.py:ess_kernel_min`, `ess/population.py:generate_diverse_population`, `tests/test_refset.py`
 
 **Origen:** AI-CHANGE-001
 
@@ -297,7 +295,7 @@ x = rng.uniform(0, 1, size=5)  # [0.77, 0.02, 0.48, ...]
 ---
 
 ### EXT rng.uniform (L1)
-**Dónde se usa:** `ess/main.py:ess_kernel_min` (línea ~145), `ess/main.py:generate_initial_population` (línea ~16)
+**Dónde se usa:** `ess/main.py:ess_kernel_min`, `ess/population.py:generate_diverse_population`
 
 **Origen:** AI-CHANGE-001
 
@@ -328,7 +326,7 @@ sample = rng.uniform([0, -5], [1, 5], size=(10, 2))  # (10, 2) en [0, 1] x [-5, 
 ---
 
 ### EXT np.argsort (L1)
-**Dónde se usa:** `ess/main.py:create_refset` (línea ~62)
+**Dónde se usa:** `ess/refset.py:create_refset` (línea ~62)
 
 **Origen:** AI-CHANGE-001
 
@@ -359,7 +357,7 @@ idx = np.argsort(f_pop)  # [3, 1, 0, 2]
 ---
 
 ### EXT np.linalg.norm (L2)
-**Dónde se usa:** `ess/main.py:select_most_diverse` (línea ~103)
+**Dónde se usa:** `ess/refset.py:select_most_diverse` (línea ~103)
 
 **Origen:** AI-CHANGE-001
 
@@ -391,7 +389,7 @@ dist = np.linalg.norm(c - r)  # sqrt((3-1)^2 + (4-1)^2) = 3.6...
 ---
 
 ### EXT np.vstack (L1)
-**Dónde se usa:** `ess/main.py:create_refset` (línea ~79)
+**Dónde se usa:** `ess/refset.py:create_refset` (línea ~79)
 
 **Origen:** AI-CHANGE-001
 
@@ -421,7 +419,7 @@ combined = np.vstack([ref1, ref2])  # (3, 2)
 ---
 
 ### EXT np.concatenate (L1)
-**Dónde se usa:** `ess/main.py:create_refset` (línea ~80)
+**Dónde se usa:** `ess/refset.py:create_refset` (línea ~80)
 
 **Origen:** AI-CHANGE-001
 
@@ -450,7 +448,7 @@ f_all = np.concatenate([f1, f2])  # [1.0, 2.0, 3.0]
 ---
 
 ### EXT np.delete (L2)
-**Dónde se usa:** `ess/main.py:select_most_diverse` (línea ~108, 109)
+**Dónde se usa:** `ess/refset.py:select_most_diverse` (línea ~108, 109)
 
 **Origen:** AI-CHANGE-001
 
@@ -488,6 +486,12 @@ result = np.delete(arr, 2)  # [1, 2, 4]
 - Actualizado `generate_initial_population` para aceptar `opts` opcional.
 - Tests en `test_refset.py` modificados para aceptar `opts` opcional y usar seed coordinado.
 - Aclaración arquitectónica: `generate_initial_population` es versión **mínima** para tests; `generate_diverse_population` es versión **estándar** de eSS (aún no integrada en kernel).
+
+### CHANGE-004A / CHANGE-004B-prep (sincronización de ubicaciones)
+- `create_refset` y `select_most_diverse` se movieron de `ess/main.py` a `ess/refset.py`.
+- `generate_initial_population` fue **eliminada**; `generate_diverse_population` (`ess/population.py`) es la única política de generación inicial.
+- `ess/control.py` y `ess/SAVE.py` fueron eliminados.
+- Este ledger se saneó en CHANGE-004B-prep para reflejar el estado real del código.
 
 ---
 

@@ -247,8 +247,6 @@ Titulo: Modulo de combinacion eSS desacoplado (nucleo matematico determinista)
 --------------------------------------------------------------------------------
 FIN CHANGE-003
 --------------------------------------------------------------------------------
-<<<<<<< Updated upstream
-=======
 
 ================================================================================
 CHANGE-003B
@@ -607,77 +605,66 @@ Titulo: Reorganizacion minima de modulos eSS y unificacion de la generacion inic
 --------------------------------------------------------------------------------
 FIN CHANGE-004A
 --------------------------------------------------------------------------------
->>>>>>> Stashed changes
-$base = git show main:changes-py.txt
-Set-Content changes-py.txt $base
-@'
-@'
+
 ================================================================================
-CHANGE-004A
-Fecha: 2026-06-02
+CHANGE-004B-prep
+Fecha: 2026-07-28
 Autor: Emily Lorena Cerqueiro Machado
 Estado: IMPLEMENTADO
-Titulo: Reorganizacion minima de modulos eSS y unificacion de la generacion inicial
+Titulo: Reparacion de changes-py.txt y sincronizacion de function-ledger.md
 ================================================================================
 
 1) Cambios por fichero
-- MEIGO_py/ess/main.py
-  - Cambio: se retiran generate_initial_population, create_refset y select_most_diverse.
-  - Cambio: main.py queda centrado en el papel de baseline/driver minimo con ess_kernel_min.
-- MEIGO_py/ess/population.py
-  - Cambio: generate_diverse_population pasa a ser la unica funcion de generacion inicial de poblacion.
-  - Cambio: se elimina la instrumentacion de debug y se admite rng opcional o seed.
-- MEIGO_py/ess/refset.py
-  - Cambio: nuevo modulo para encapsular create_refset y select_most_diverse.
-- MEIGO_py/run_ess.py
-  - Cambio: actualizacion de imports al nuevo reparto de modulos.
-  - Cambio: evaluacion explicita de la poblacion antes de create_refset.
-- MEIGO_py/tests/test_refset.py
-  - Cambio: los tests pasan a usar generate_diverse_population y create_refset desde sus nuevos modulos.
-- MEIGO_py/control.py
-  - Cambio: eliminado por no tener responsabilidad real.
-- MEIGO_py/ess/SAVE.py
-  - Cambio: eliminado por no tener encaje actual en la arquitectura.
+- MEIGO_py/changes-py.txt
+  - Cambio: eliminados los marcadores de conflicto de git (<<<<<<< Updated upstream,
+    =======, >>>>>>> Stashed changes).
+  - Cambio: eliminado el contenido PowerShell pegado por error ($base = git show main:...,
+    Set-Content, bloques @') y la copia duplicada de CHANGE-004A al final del fichero.
+  - Cambio: el historico CHANGE-001..004A queda unico, ordenado y sin marcadores.
+- MEIGO_py/function-ledger.md
+  - Cambio: create_refset y select_most_diverse re-ubicadas de ess/main.py a ess/refset.py.
+  - Cambio: retirada la entrada de generate_initial_population (eliminada en CHANGE-004A).
+  - Cambio: anadida entrada de generate_diverse_population (ess/population.py) como unica
+    politica de generacion inicial.
 
 2) Decision y motivo (1-3 lineas)
-- Decision: unificar la generacion inicial en generate_diverse_population y separar la logica de RefSet fuera de main.py.
-- Motivo: reducir duplicidad funcional y dejar cada modulo con una responsabilidad mas clara.
+- Decision: sanear el registro y el ledger antes de construir CHANGE-004B encima.
+- Motivo: changes-py.txt estaba corrupto con marcadores de conflicto y el ledger apuntaba
+  a funciones ya movidas; el estado documentado debe reflejar el codigo real.
 
 3) Referencia al codigo MATLAB/R original
-- MATLAB: MEIGO64-master/MEIGO/eSS/ess_kernel.m
-- MATLAB: referencia conceptual del kernel secuencial de eSS.
-- R: No aplica.
+- No aplica: cambio de documentacion interna del proyecto Python.
 
-4) Observaciones sobre la implementacion actual
-- main.py mezclaba driver minimo con generacion inicial y logica de RefSet.
-- population.py solo contenia una funcion, pero esa funcion si encaja como base de inicializacion de eSS.
-- combination.py no se modifica estructuralmente en esta fase.
+4) Observaciones sobre la implementacion original (MATLAB)
+- No aplica.
+- NOTA DE RECONCILIACION: las entradas CHANGE-003C, 003C2, 003D y 003D2 describen funciones
+  (ssm_combination_pair, ssm_beyond_pair, build_v_vectors, ssm_combination_refset y el
+  contrato eval_fn) que NO estan presentes en el codigo en disco. El estado real de
+  combination.py corresponde a CHANGE-003/003B (build_combination_pairs, combine_pair_core,
+  generate_candidates_from_refset; deterministas y sin evaluacion). Esas entradas se conservan
+  como historico, pero su funcionalidad se considera NO PRESENTE (perdida en stash/merge) y
+  debera recuperarse/reconstruirse en CHANGE-004C.
 
 5) Implicaciones al trasladar a Python
-- Se adopta una sola politica explicita de generacion inicial.
-- La logica de RefSet pasa a un modulo reutilizable e independiente del driver.
-- ess_kernel_min se mantiene como baseline minima sin crecer como kernel real.
+- Ninguna sobre codigo ejecutable; solo consistencia documental.
 
 6) Ventajas de Python implementadas aqui
-- Menor duplicidad funcional.
-- Modulos mas faciles de localizar y reutilizar.
-- main.py queda mas limpio y preparado para un driver eSS real posterior.
+- No aplica (sin codigo ejecutable).
 
 7) Desventajas / limitaciones respecto a MATLAB
-- generate_diverse_population sigue sin replicar literalmente la inicializacion de ess_kernel.m.
-- Este cambio es estructural; no implementa aun update_refset ni el loop secuencial completo.
+- No aplica.
 
 8) Tests y evidencia
-- python -m pytest tests/test_refset.py -v
-- python -m pytest tests/test_combine.py -v
+- Revision manual: changes-py.txt sin marcadores de conflicto ni contenido duplicado.
+- python -m pytest tests/test_refset.py tests/test_combine.py -v (sin cambios de codigo,
+  deben seguir pasando).
 
 9) Conclusion matematica del procedimiento
-- No cambia la matematica de RefSet ni de combinacion; cambia solo la ubicacion de funciones y la politica unica de inicializacion.
+- No aplica: no cambia el algoritmo.
 
 10) Pendientes / riesgos / proximos pasos
-- Pendiente: decidir si function-ledger.md debe sincronizarse con la nueva ubicacion de funciones.
-- Riesgo: romper imports externos que aun apunten a ess.main; mitigacion: actualizar tests y runner principal.
-- Proximo paso: preparar CHANGE-004B para update_refset y la primera version del driver secuencial de eSS.
+- Proximo paso: CHANGE-004B (inicializacion fiel a ess_kernel.m + update_refset) sobre base limpia.
+- CHANGE-004C: recuperar la combinacion evaluativa (eval_fn, prob_bound, ssm_beyond).
 --------------------------------------------------------------------------------
-FIN CHANGE-004A
+FIN CHANGE-004B-prep
 --------------------------------------------------------------------------------
